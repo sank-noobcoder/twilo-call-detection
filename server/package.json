@@ -1,0 +1,19 @@
+{
+  "name": "twilio-voice-auth-server",
+  "version": "1.0.0",
+  "description": "Twilio Voice webhook server for AI voice cloning detection",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "dns": "^0.2.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "twilio": "^5.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}

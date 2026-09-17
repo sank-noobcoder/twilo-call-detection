@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Voice Auth Test Caller</title>
+  <script src="https://cdn.jsdelivr.net/npm/@twilio/voice-sdk@2.18.4/dist/twilio.min.js"></script>
+</head>
+<body style="font-family: sans-serif; text-align: center; margin-top: 80px;">
+  <h2>Voice Authenticity Test Caller</h2>
+  <p>Places a real call through Twilio directly from this browser -- no phone/SIM needed.</p>
+  <button id="callBtn" style="font-size: 20px; padding: 12px 30px;">📞 Call</button>
+  <button id="hangupBtn" style="font-size: 20px; padding: 12px 30px;" disabled>🔴 Hang Up</button>
+  <p id="status">Not connected</p>
+
+  <script>
+  const statusEl = document.getElementById("status");
+  const callBtn = document.getElementById("callBtn");
+  const hangupBtn = document.getElementById("hangupBtn");
+
+  let device;
+  let activeCall;
+
+  const SERVER_URL = "http://localhost:5000";
+
+  async function setup() {
+    try {
+      statusEl.textContent = "Getting token...";
+
+      const res = await fetch(`${SERVER_URL}/token`);
+
+      if (!res.ok) {
+        throw new Error(`Token request failed: ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      console.log("Token received:", !!data.token);
+
+      if (!data.token) {
+        throw new Error("No token returned by /token");
+      }
+
+      device = new Twilio.Device(data.token, {
+        logLevel: 1,
+        enableImprovedSignalingErrorPrecision: true
+      });
+
+      device.on("registered", () => {
+        console.log("Twilio Device registered");
+        statusEl.textContent = "✅ Ready to call";
+        callBtn.disabled = false;
+      });
+
+      device.on("registering", () => {
+        console.log("Twilio Device registering...");
+        statusEl.textContent = "Registering...";
+      });
+
+      device.on("error", (err) => {
+        console.error("========== TWILIO ERROR ==========");
+        console.error("Code:", err.code);
+        console.error("Message:", err.message);
+        console.error("Name:", err.name);
+        console.error("Causes:", err.causes);
+        console.error("Solutions:", err.solutions);
+        console.error("==================================");
+
+        statusEl.textContent =
+          `Error ${err.code}: ${err.message}`;
+      });
+
+      device.on("unregistered", () => {
+        console.log("Device unregistered");
+        statusEl.textContent = "Device disconnected";
+      });
+
+      await device.register();
+
+    } catch (err) {
+      console.error("SETUP ERROR:", err);
+      statusEl.textContent = "Setup error: " + err.message;
+    }
+  }
+
+  callBtn.addEventListener("click", async () => {
+    try {
+      statusEl.textContent = "Calling...";
+
+      activeCall = await device.connect();
+
+      console.log("Call object:", activeCall);
+
+      callBtn.disabled = true;
+      hangupBtn.disabled = false;
+
+      activeCall.on("accept", () => {
+        console.log("Call accepted");
+        statusEl.textContent = "📞 Connected";
+      });
+
+      activeCall.on("ringing", () => {
+        console.log("Call ringing");
+        statusEl.textContent = "📳 Ringing...";
+      });
+
+      activeCall.on("disconnect", () => {
+        console.log("Call disconnected");
+        statusEl.textContent = "Call ended";
+
+        callBtn.disabled = false;
+        hangupBtn.disabled = true;
+      });
+
+      activeCall.on("cancel", () => {
+        console.log("Call cancelled");
+        statusEl.textContent = "Call cancelled";
+      });
+
+      activeCall.on("error", (err) => {
+        console.error("CALL ERROR:", err);
+        statusEl.textContent =
+          `Call error ${err.code}: ${err.message}`;
+      });
+
+    } catch (err) {
+      console.error("CONNECT ERROR:", err);
+      statusEl.textContent =
+        `Connection error ${err.code || ""}: ${err.message}`;
+
+      callBtn.disabled = false;
+      hangupBtn.disabled = true;
+    }
+  });
+
+  hangupBtn.addEventListener("click", () => {
+    if (activeCall) {
+      activeCall.disconnect();
+    }
+  });
+
+  callBtn.disabled = true;
+  setup();
+</script>
+</body>
+</html>

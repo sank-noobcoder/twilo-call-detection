@@ -1,0 +1,9 @@
+server/.env
+server/node_modules/
+voice_auth_service/.env
+voice_auth_service/__pycache__/
+voice_auth_service/.venv/
+*.pyc
+*.wav
+__pycache__/
+.DS_Store
